@@ -33,15 +33,15 @@ class LoadScreen(tools._State):
 
     def update(self, surface, keys, current_time):
         """Updates the loading screen"""
-        if (current_time - self.start_time) < 2400:
+        if (current_time - self.start_time) < 600:
             surface.fill(c.BLACK)
             self.overhead_info.update(self.game_info)
             self.overhead_info.draw(surface)
 
-        elif (current_time - self.start_time) < 2600:
+        elif (current_time - self.start_time) < 600:
             surface.fill(c.BLACK)
 
-        elif (current_time - self.start_time) < 2635:
+        elif (current_time - self.start_time) < 600:
             surface.fill((106, 150, 252))
 
         else:
