@@ -6,11 +6,12 @@ import numpy as np
 import pandas as pd
 from operator import add
 import collections
+from .components.enemies import Goomba
 
 class DQNAgent(object):
     def __init__(self, params):
         self.reward = 0
-        self.gamma = 0.9
+        self.gamma = 0.999
         self.dataframe = pd.DataFrame()
         self.short_memory = np.array([])
         self.agent_target = 1
@@ -24,7 +25,7 @@ class DQNAgent(object):
         self.memory = collections.deque(maxlen=params['memory_size'])
         self.weights = params['weights_path']
         self.load_weights = params['load_weights']
-        self.input_dim = 1
+        self.input_dim = 5
         self.model = self.network()
 
     def network(self):
@@ -32,7 +33,7 @@ class DQNAgent(object):
         model.add(Dense(output_dim=self.first_layer, activation='relu', input_dim=self.input_dim))
         model.add(Dense(output_dim=self.second_layer, activation='relu'))
         model.add(Dense(output_dim=self.third_layer, activation='relu'))
-        model.add(Dense(output_dim=5, activation='softmax'))
+        model.add(Dense(output_dim=12, activation='softmax'))
         opt = Adam(self.learning_rate)
         model.compile(loss='mse', optimizer=opt)
 
@@ -40,55 +41,67 @@ class DQNAgent(object):
             model.load_weights(self.weights)
         return model
     
-    def get_state(self, game, player, food):
-        state = [
-            (player.x_change == 20 and player.y_change == 0 and ((list(map(add, player.position[-1], [20, 0])) in player.position) or
-            player.position[-1][0] + 20 >= (game.game_width - 20))) or (player.x_change == -20 and player.y_change == 0 and ((list(map(add, player.position[-1], [-20, 0])) in player.position) or
-            player.position[-1][0] - 20 < 20)) or (player.x_change == 0 and player.y_change == -20 and ((list(map(add, player.position[-1], [0, -20])) in player.position) or
-            player.position[-1][-1] - 20 < 20)) or (player.x_change == 0 and player.y_change == 20 and ((list(map(add, player.position[-1], [0, 20])) in player.position) or
-            player.position[-1][-1] + 20 >= (game.game_height-20))),  # danger straight
+    def get_state(self, mario, sprites):
+        state = [0] * 5
 
-            (player.x_change == 0 and player.y_change == -20 and ((list(map(add,player.position[-1],[20, 0])) in player.position) or
-            player.position[ -1][0] + 20 > (game.game_width-20))) or (player.x_change == 0 and player.y_change == 20 and ((list(map(add,player.position[-1],
-            [-20,0])) in player.position) or player.position[-1][0] - 20 < 20)) or (player.x_change == -20 and player.y_change == 0 and ((list(map(
-            add,player.position[-1],[0,-20])) in player.position) or player.position[-1][-1] - 20 < 20)) or (player.x_change == 20 and player.y_change == 0 and (
-            (list(map(add,player.position[-1],[0,20])) in player.position) or player.position[-1][
-             -1] + 20 >= (game.game_height-20))),  # danger right
+        # mario mode
+        if mario.big:
+            state[0] = 1
+        if mario.fire:
+            state[0] = 2
 
-             (player.x_change == 0 and player.y_change == 20 and ((list(map(add,player.position[-1],[20,0])) in player.position) or
-             player.position[-1][0] + 20 > (game.game_width-20))) or (player.x_change == 0 and player.y_change == -20 and ((list(map(
-             add, player.position[-1],[-20,0])) in player.position) or player.position[-1][0] - 20 < 20)) or (player.x_change == 20 and player.y_change == 0 and (
-            (list(map(add,player.position[-1],[0,-20])) in player.position) or player.position[-1][-1] - 20 < 20)) or (
-            player.x_change == -20 and player.y_change == 0 and ((list(map(add,player.position[-1],[0,20])) in player.position) or
-            player.position[-1][-1] + 20 >= (game.game_height-20))), #danger left
+        # direction
+        if mario.x_vel < 0 and mario.y_vel < 0:
+            state[1] = 0
+        elif mario.x_vel == 0 and mario.y_vel < 0:
+            state[1] = 1
+        elif mario.x_vel > 0 and mario.y_vel < 0:
+            state[1] = 2
+        elif mario.x_vel < 0 and mario.y_vel == 0:
+            state[1] = 3
+        elif mario.x_vel == 0 and mario.y_vel == 0:
+            state[1] = 4
+        elif mario.x_vel > 0 and mario.y_vel == 0:
+            state[1] = 5
+        elif mario.x_vel < 0 and mario.y_vel > 0:
+            state[1] = 6
+        elif mario.x_vel == 0 and mario.y_vel > 0:
+            state[1] = 7
+        else:
+            state[1] = 8
 
+        # enemies
+        for sprite in sprites:
+            if type(sprite) is Goomba:
+                if sprite.rect.x > mario.rect.x:
+                    state[2] = 1
+                elif sprite.rect.x < mario.rect.x:
+                    state[3] = 1
 
-            player.x_change == -20,  # move left
-            player.x_change == 20,  # move right
-            player.y_change == -20,  # move up
-            player.y_change == 20,  # move down
-            food.x_food < player.x,  # food left
-            food.x_food > player.x,  # food right
-            food.y_food < player.y,  # food up
-            food.y_food > player.y  # food down
-            ]
-
-        for i in range(len(state)):
-            if state[i]:
-                state[i]=1
-            else:
-                state[i]=0
+        # can jump
+        if mario.allow_jump:
+            state[4] = 1
 
         return np.asarray(state)
 
-    def set_reward(self, player, crash):
-        self.reward = 0
-        if crash:
-            self.reward = -10
-            return self.reward
-        if player.eaten:
-            self.reward = 10
-        return self.reward
+    def set_reward(self, mario_old, mario_new, is_dead, passed_checkpoint, win):
+        if win:
+            return 100000
+        x_old = mario_old[0]
+        x_new = mario_new[0]
+        big_old = mario_old[2]
+        big_new = mario_new[2]
+        if is_dead:
+            return -100
+        if passed_checkpoint:
+            print('passed checkpoint')
+            return 1000
+        if big_new and not big_old:
+            print('big')
+            return 5000
+        if x_new == x_old:
+            return -10
+        return x_new - x_old# + (y_old - y_new) * 0.1
 
     def remember(self, state, action, reward, next_state):
         self.memory.append((state, action, reward, next_state))

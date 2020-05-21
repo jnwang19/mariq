@@ -102,35 +102,35 @@ class Level1(tools._State):
     def setup_steps(self):
         """Create collideable rects for all the steps"""
         step1 = collider.Collider(5745, 495, 40, 44)
-        step2 = collider.Collider(5788, 452, 40, 44)
-        step3 = collider.Collider(5831, 409, 40, 44)
+        step2 = collider.Collider(5788, 452, 40, 88)
+        step3 = collider.Collider(5831, 409, 40, 132)
         step4 = collider.Collider(5874, 366, 40, 176)
 
 
         step5 = collider.Collider(6001, 366, 40, 176)
-        step6 = collider.Collider(6044, 408, 40, 40)
-        step7 = collider.Collider(6087, 452, 40, 40)
+        step6 = collider.Collider(6044, 408, 40, 132)
+        step7 = collider.Collider(6087, 452, 40, 88)
         step8 = collider.Collider(6130, 495, 40, 40)
 
         step9 = collider.Collider(6345, 495, 40, 40)
-        step10 = collider.Collider(6388, 452, 40, 40)
-        step11 = collider.Collider(6431, 409, 40, 40)
-        step12 = collider.Collider(6474, 366, 40, 40)
+        step10 = collider.Collider(6388, 452, 40, 88)
+        step11 = collider.Collider(6431, 409, 40, 132)
+        step12 = collider.Collider(6474, 366, 40, 176)
         step13 = collider.Collider(6517, 366, 40, 176)
 
         step14 = collider.Collider(6644, 366, 40, 176)
-        step15 = collider.Collider(6687, 408, 40, 40)
-        step16 = collider.Collider(6728, 452, 40, 40)
+        step15 = collider.Collider(6687, 408, 40, 132)
+        step16 = collider.Collider(6728, 452, 40, 88)
         step17 = collider.Collider(6771, 495, 40, 40)
 
         step18 = collider.Collider(7760, 495, 40, 40)
-        step19 = collider.Collider(7803, 452, 40, 40)
-        step20 = collider.Collider(7845, 409, 40, 40)
-        step21 = collider.Collider(7888, 366, 40, 40)
-        step22 = collider.Collider(7931, 323, 40, 40)
-        step23 = collider.Collider(7974, 280, 40, 40)
-        step24 = collider.Collider(8017, 237, 40, 40)
-        step25 = collider.Collider(8060, 194, 40, 40)
+        step19 = collider.Collider(7803, 452, 40, 80)
+        step20 = collider.Collider(7845, 409, 40, 120)
+        step21 = collider.Collider(7888, 366, 40, 160)
+        step22 = collider.Collider(7931, 323, 40, 200)
+        step23 = collider.Collider(7974, 280, 40, 240)
+        step24 = collider.Collider(8017, 237, 40, 280)
+        step25 = collider.Collider(8060, 194, 40, 320)
         step26 = collider.Collider(8103, 194, 40, 360)
 
         step27 = collider.Collider(8488, 495, 40, 40)
@@ -1405,7 +1405,7 @@ class Level1(tools._State):
             self.flag_timer = self.current_time
         elif (self.current_time - self.flag_timer) > 2000:
             self.set_game_info_values()
-            self.next = c.GAME_OVER
+            self.next = c.LOAD_SCREEN
             self.sound_manager.stop_music()
             self.done = True
 

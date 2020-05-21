@@ -15,7 +15,13 @@ keybinding = {
     'down':pg.K_DOWN
 }
 
-movebinding = [pg.K_s, pg.K_a, pg.K_LEFT, pg.K_RIGHT, pg.K_DOWN]
+left_set = {0, 1, 2, 3}
+right_set = {4, 5, 6, 7}
+stay_set = {8, 9, 10, 11}
+jump_set = {0, 1, 4, 5, 8, 9}
+nojump_set = {2, 3, 6, 7, 10, 11}
+speed_set = {0, 2, 4, 6, 8, 10}
+nospeed_set = {1, 3, 5, 7, 9, 11}
 
 def define_parameters():
     params = dict()
@@ -24,12 +30,12 @@ def define_parameters():
     params['first_layer_size'] = 150   # neurons in the first layer
     params['second_layer_size'] = 150   # neurons in the second layer
     params['third_layer_size'] = 150    # neurons in the third layer
-    params['episodes'] = 50            
-    params['memory_size'] = 2500
-    params['batch_size'] = 500
+    params['episodes'] = 5            
+    params['memory_size'] = 1000
+    params['batch_size'] = 200
     params['weights_path'] = 'weights/weights.hdf5'
     params['load_weights'] = True
-    params['train'] = False
+    params['train'] = True
     return params
 
 class Control(object):
@@ -103,9 +109,13 @@ class Control(object):
         new_game = False # flag to signify a new game has started
 
         while not self.done and counter_games < params['episodes']:
+            win = False
+            count = 0
             while not crash:
                 self.event_loop()
-                self.update()
+                # update game if not in level 1
+                if self.state_name != 'level1' or self.state.mario.dead:
+                    self.update()
                 if self.display:
                     pg.display.update()
                 self.clock.tick(self.fps)
@@ -113,7 +123,7 @@ class Control(object):
                     fps = self.clock.get_fps()
                     with_fps = "{} - {:.2f} FPS".format(self.caption, fps)
                     pg.display.set_caption(with_fps)
-                if self.state_name == 'level1':
+                if self.state_name == 'level1' and not self.state.mario.dead:
                     if not self.state.mario.dead:
                         new_game = True
 
@@ -123,39 +133,55 @@ class Control(object):
                         # agent.epsilon is set to give randomness to actions
                         agent.epsilon = 1 - (counter_games * params['epsilon_decay_linear'])
 
-                    state_old = np.asarray(self.state.mario.rect.x // 20)
-                        
+                    state_old = agent.get_state(self.state.mario, self.state.mario_and_enemy_group.sprites())
+                    mario_old = (self.state.mario.rect.x, self.state.mario.rect.y, self.state.mario.big)
+
+                    checkpoints_old = len(self.state.check_point_group)
+
                     # perform random actions based on agent.epsilon, or choose the action
                     if randint(0, 1) < agent.epsilon:
-                        final_move = np.random.randint(2, size=5)
+                        final_move = randint(0, 11)
                     else:
                         # predict action based on the old state
-                        prediction = agent.model.predict(state_old.reshape((1, 1)))
+                        prediction = agent.model.predict(state_old.reshape((1, 5)))
                         choice = np.argmax(prediction[0])
-                        if randint(0, 1) < 0.1:
-                            choice = np.random.choice(5, p=prediction[0])
-                        final_move = to_categorical(choice, num_classes=5)
+                        # if randint(0, 1) < 0.1:
+                        #     choice = np.random.choice(5, p=prediction[0])
+                        final_move = choice
 
                     # perform new move and get new state
                     self.keys = self.convert_to_keys(final_move)
-                    state_new = np.asarray(self.state.mario.rect.x // 20)
+                    self.update()
+
+                    if self.state_name == 'level1':
+                        state_new = agent.get_state(self.state.mario, self.state.mario_and_enemy_group.sprites())
+                        mario_new = (self.state.mario.rect.x, self.state.mario.rect.y, self.state.mario.big)
+                        checkpoints_new = len(self.state.check_point_group)
+                        is_dead = self.state.mario.dead
+                    else:
+                        win = True
+                    
 
                     # set reward for the new state
-                    reward = self.set_reward(state_old, state_new, self.state.mario.dead)
+                    passed_checkpoint = checkpoints_old > checkpoints_new
+                    reward = agent.set_reward(mario_old, mario_new, is_dead, passed_checkpoint, win)
 
                     if params['train']:
                         # train short memory base on the new action and state
                         agent.train_short_memory(state_old, final_move, reward, state_new)
                         # store the new data into a long term memory
                         agent.remember(state_old, final_move, reward, state_new)
-                        
-                    if self.state.mario.dead:
+                    count += 1
+                    if self.state_name != 'level1' or self.state.mario.dead:
                         crash = True
+                        print(count)
 
             if params['train'] and new_game:
                 new_game = False
+                print('replaying')
                 agent.replay_new(agent.memory, params['batch_size'])
                 counter_games += 1
+            print("counter_games: " + str(counter_games))
             crash = False
 
         if params['train']:
@@ -164,21 +190,18 @@ class Control(object):
             print('saved')
             
 
-    def convert_to_keys(self, moveVec):
+    def convert_to_keys(self, action):
         keys = [0] * 323 # normal pg.keys is length 323
-        for i in range(len(moveVec)):
-            if moveVec[i] == 1:
-                keys[movebinding[i]] = 1
-        return keys
 
-    def set_reward(self, state_old, state_new, is_dead):
-        if is_dead:
-            return -10
-        if state_new > state_old:
-            return 1
-        elif state_new <= state_old:
-            return -1
-        return 0
+        if action in left_set:
+            keys[keybinding['left']] = 1
+        if action in right_set:
+            keys[keybinding['right']] = 1
+        if action in jump_set:
+            keys[keybinding['jump']] = 1
+        if action in speed_set:
+            keys[keybinding['action']] = 1
+        return keys
 
 class _State(object):
     def __init__(self):
