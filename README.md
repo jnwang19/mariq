@@ -6,6 +6,7 @@ This project experiments with deep Q-learning networks applied to Mario. A three
 Train: ``python mario_level_1.py``
 
 ## Demo
+Below is a gif of the agent during training:
 ![Training Demo](demo/gif-2.gif)
 
 Credits:
