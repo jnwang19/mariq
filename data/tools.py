@@ -30,7 +30,7 @@ def define_parameters():
     params['first_layer_size'] = 150   # neurons in the first layer
     params['second_layer_size'] = 150   # neurons in the second layer
     params['third_layer_size'] = 150    # neurons in the third layer
-    params['episodes'] = 5            
+    params['episodes'] = 100            
     params['memory_size'] = 1000
     params['batch_size'] = 200
     params['weights_path'] = 'weights/weights.hdf5'
@@ -47,7 +47,7 @@ class Control(object):
         self.done = False
         self.clock = pg.time.Clock()
         self.caption = caption
-        self.fps = 60
+        self.fps = 120
         self.show_fps = True
         self.current_time = 0.0
         self.keys = pg.key.get_pressed()
@@ -174,7 +174,7 @@ class Control(object):
                     count += 1
                     if self.state_name != 'level1' or self.state.mario.dead:
                         crash = True
-                        print(count)
+                        # print(count)
 
             if params['train'] and new_game:
                 new_game = False

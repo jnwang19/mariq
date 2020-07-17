@@ -86,7 +86,7 @@ class DQNAgent(object):
 
     def set_reward(self, mario_old, mario_new, is_dead, passed_checkpoint, win):
         if win:
-            return 100000
+            return 10000
         x_old = mario_old[0]
         x_new = mario_new[0]
         big_old = mario_old[2]
